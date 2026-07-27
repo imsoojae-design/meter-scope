@@ -1,0 +1,50 @@
+name: Build Windows EXE (C)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        install: mingw-w64-x86_64-gcc
+
+    - name: Build EXE
+      shell: msys2 {0}
+      run: |
+        gcc -o MeterSimulator.exe meter_simulator.c oscilloscope.c \
+          -lcomctl32 -luser32 -lgdi32 \
+          -mwindows -O2 -municode -Wall
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: MeterSimulator-Windows
+        path: MeterSimulator.exe
+        retention-days: 30
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v1.2-${{ github.run_number }}
+        name: "수도미터 USB 시뮬레이터 V1.2 (Build ${{ github.run_number }})"
+        body: |
+          ## 수도미터 USB 시뮬레이터 (계량기 / Slave 역할)
+          - 서울특별시 디지털계량기 프로토콜 V1.2 준수
+          - TX/RX 오실로스코프 파형 표시
+          - 연결 즉시 TX/RX Low level (전기적 절연 상태) 강제
+        files: MeterSimulator.exe
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
